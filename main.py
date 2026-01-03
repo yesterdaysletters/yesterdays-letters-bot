@@ -70,8 +70,10 @@ def generate_concept():
 # =========================================================
 # 2. IMAGE
 # =========================================================
+import base64
+
 def generate_image(prompt):
-    print("2. Generating HD Image (URL Mode)...")
+    print("2. Generating HD Image (Base64 Mode)...")
     try:
         r = client.images.generate(
             model="gpt-image-1",
@@ -80,10 +82,13 @@ def generate_image(prompt):
             n=1,
         )
 
-        image_url = r.data[0].url
-        print("Image generation OK")
-        print("IMAGE URL:", image_url)
-        return image_url
+        image_base64 = r.data[0].b64_json
+        if not image_base64:
+            raise Exception("No image data returned")
+
+        image_bytes = base64.b64decode(image_base64)
+        print("Image generation OK (base64)")
+        return BytesIO(image_bytes)
 
     except Exception as e:
         print("Image error:", e)
@@ -179,3 +184,4 @@ if __name__ == "__main__":
 
     final_image = add_text_and_watermark(image_url, text, position)
     post_to_facebook(final_image)
+
