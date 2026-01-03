@@ -47,7 +47,7 @@ def generate_image(prompt):
     response = client.images.generate(
         model="gpt-image-1.5", 
         prompt=prompt,
-        size="1200x1500",  # Real 4:5 resolution for Facebook
+        size="1024x1536",  # Real 4:5 resolution for Facebook
         quality="high",
         n=1,
     )
@@ -126,6 +126,7 @@ if __name__ == "__main__":
         img_url = generate_image(prompt)
         final_img = add_text_and_watermark(img_url, text, pos)
         post_to_facebook(final_img)
+
 
 
 
