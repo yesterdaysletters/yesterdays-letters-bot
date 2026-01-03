@@ -75,11 +75,10 @@ def generate_concept():
 def generate_image(prompt):
     print("2. Generating HD Image (Base64 Mode, supported size)...")
 
-    # Use a supported size, then crop locally to 4:5
     r = client.images.generate(
         model="gpt-image-1",
         prompt=prompt,
-        size="1024x1792",  # supported
+        size="1024x1536",  # ✅ supported
         n=1,
     )
 
@@ -91,11 +90,11 @@ def generate_image(prompt):
     return BytesIO(base64.b64decode(image_b64))
 
 # =========================================================
-# 2.5 CROP TO 4:5 (SAFE)
+# 2.5 SAFE CROP TO 4:5 (1024x1280)
 # =========================================================
 def crop_to_4_5(img):
     target_width = img.width
-    target_height = int(img.width * 5 / 4)  # 4:5
+    target_height = int(target_width * 5 / 4)  # 1024 → 1280
 
     if img.height < target_height:
         raise Exception("Image too short to crop to 4:5")
@@ -111,7 +110,7 @@ def add_text_and_watermark(image_buffer, text, position):
     print("3. Designing typography...")
 
     img = Image.open(image_buffer).convert("RGBA")
-    img = crop_to_4_5(img)  # now 1024x1280
+    img = crop_to_4_5(img)  # now exactly 1024x1280
 
     canvas = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(canvas)
