@@ -1,9 +1,10 @@
 import os
 import random
 import base64
+import json
 import requests
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, date
 import pytz
 
 from openai import OpenAI
@@ -27,12 +28,9 @@ client = OpenAI(api_key=OPENAI_KEY)
 # =========================================================
 # COST CONTROL
 # =========================================================
-# RULE #2: ONE POST PER DAY ONLY
-POST_WINDOWS = [
-    (19, 21),  # 7–9 PM ONLY
-]
-
+POST_WINDOWS = [(19, 21)]  # 7–9 PM ONLY
 LAST_POST_FILE = "last_post.txt"
+HOLIDAY_HISTORY_FILE = "holiday_history.json"
 
 def is_good_posting_time():
     tz = pytz.timezone(TIMEZONE)
@@ -127,114 +125,47 @@ def choose_scene_and_text():
     return scene, text
 
 # =========================================================
-# IMAGE GENERATION (CALLED ONLY IF POSTING)
+# HOLIDAY POSTS — EXACT DATE ONLY
 # =========================================================
-def generate_image(scene):
-    theme = get_monthly_theme()
-    prompt = (
-        f"{SCENE_PROMPTS[scene]}. "
-        f"{STATIC_STYLE} "
-        f"{theme}"
-    )
+HOLIDAY_POSTS = {
+    (1, 1):  {"name": "new_year", "text": "This year, I’m learning to walk slower and trust God more.", "scene": "quiet lakeside at dawn"},
+    (2, 14): {"name": "valentines", "text": "Love is choosing patience when it would be easier to leave.", "scene": "evening street lights, two figures walking"},
+    (3, 8):  {"name": "womens_day", "text": "Strong women don’t always speak loudly. Sometimes they endure quietly.", "scene": "woman by window, morning light"},
+    (4, 1):  {"name": "april_fools", "text": "Not everything that looks like failure is the end of the story.", "scene": "winding road, light through clouds"},
+    (5, 1):  {"name": "labor_may", "text": "The work you do in silence still matters.", "scene": "worker resting at sunset"},
+    (6, 1):  {"name": "pride", "text": "You are allowed to exist without explaining yourself.", "scene": "person standing in open field at sunrise"},
+    (7, 4):  {"name": "independence", "text": "Freedom begins when fear no longer decides for you.", "scene": "open road under wide sky"},
+    (8, 4):  {"name": "friendship", "text": "Some friendships are answers to prayers we never said out loud.", "scene": "two silhouettes at golden hour"},
+    (9, 1):  {"name": "labor_sep", "text": "Rest is not quitting. It’s preparation.", "scene": "empty park bench, late afternoon"},
+    (10, 31):{"name": "halloween", "text": "Not everything hidden is dangerous. Some things are healing.", "scene": "foggy forest path, lantern glow"},
+    (11, 28):{"name": "thanksgiving", "text": "Gratitude doesn’t erase pain, but it softens the weight.", "scene": "table by window, autumn light"},
+    (12, 25):{"name": "christmas", "text": "Hope often arrives quietly, not loudly.", "scene": "snowy street at night, warm windows"},
+}
 
-    r = client.images.generate(
-        model="gpt-image-1",
-        prompt=prompt,
-        size="1024x1536",
-        n=1,
-    )
+def load_holiday_history():
+    if not os.path.exists(HOLIDAY_HISTORY_FILE):
+        return {}
+    with open(HOLIDAY_HISTORY_FILE) as f:
+        return json.load(f)
 
-    image_b64 = r.data[0].b64_json
-    return BytesIO(base64.b64decode(image_b64))
+def save_holiday_history(history):
+    with open(HOLIDAY_HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=2)
 
-# =========================================================
-# IMAGE PROCESSING
-# =========================================================
-FONT_MAIN = "fonts/LibreBaskerville-Regular.ttf"
-WATERMARK_TEXT = "© Yesterday's Letters"
+def get_today_holiday():
+    today = date.today()
+    key = (today.month, today.day)
+    if key not in HOLIDAY_POSTS:
+        return None
 
-def crop_to_4_5(img):
-    target_h = int(img.width * 5 / 4)
-    top = (img.height - target_h) // 2
-    return img.crop((0, top, img.width, top + target_h))
+    history = load_holiday_history()
+    year = str(today.year)
+    used = history.get(year, [])
 
-def is_dark(img, box):
-    crop = img.crop(box).convert("L")
-    return ImageStat.Stat(crop).mean[0] < 130
+    holiday = HOLIDAY_POSTS[key]
+    if holiday["name"] in used:
+        return None
 
-def add_text(image_buffer, text):
-    img = Image.open(image_buffer).convert("RGBA")
-    img = crop_to_4_5(img)
+    return holiday
 
-    draw_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(draw_layer)
-
-    font = ImageFont.truetype(FONT_MAIN, 42)
-    box_w = int(img.width * 0.72)
-    box_h = 220
-    box_x = (img.width - box_w) // 2
-    box_y = int(img.height * 0.45)
-
-    dark = is_dark(img, (box_x, box_y, box_x + box_w, box_y + box_h))
-    color = (245, 245, 240, 255) if dark else (30, 30, 30, 255)
-
-    words = text.split()
-    lines, line = [], ""
-    for w in words:
-        test = f"{line} {w}".strip()
-        if draw.textlength(test, font=font) <= box_w:
-            line = test
-        else:
-            lines.append(line)
-            line = w
-    lines.append(line)
-
-    y = box_y + (box_h - len(lines) * 54) // 2
-    for l in lines:
-        w = draw.textlength(l, font=font)
-        draw.text(((img.width - w) // 2, y), l, font=font, fill=color)
-        y += 54
-
-    final = Image.alpha_composite(img, draw_layer)
-    out = BytesIO()
-    final.convert("RGB").save(out, "JPEG", quality=95)
-    out.seek(0)
-    return out
-
-# =========================================================
-# FACEBOOK POST
-# =========================================================
-def post_to_facebook(image_buffer):
-    url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/photos"
-    data = {"access_token": FB_TOKEN, "published": "true"}
-    files = {"source": ("image.jpg", image_buffer, "image/jpeg")}
-
-    r = requests.post(url, data=data, files=files)
-    if r.status_code != 200:
-        raise Exception(r.text)
-
-# =========================================================
-# MAIN (STRICT ORDER — DO NOT CHANGE)
-# =========================================================
-if __name__ == "__main__":
-
-    # RULE #1 — NEVER GENERATE UNLESS WE WILL POST
-    if not is_good_posting_time():
-        print("Outside posting window. Skipping.")
-        exit(0)
-
-    if already_posted_today():
-        print("Already posted today. Skipping.")
-        exit(0)
-
-    # ONLY NOW DO WE SPEND MONEY
-    scene, text = choose_scene_and_text()
-    print("SCENE:", scene)
-    print("TEXT:", text)
-
-    image_buffer = generate_image(scene)
-    final_image = add_text(image_buffer, text)
-    post_to_facebook(final_image)
-
-    mark_posted_today()
-    print("Post successful.")
+def mark_holiday_u
