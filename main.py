@@ -3,15 +3,19 @@ import random
 import base64
 import requests
 from io import BytesIO
+from datetime import datetime
+import pytz
+
 from openai import OpenAI
 from PIL import Image, ImageDraw, ImageFont, ImageStat
 
 # =========================================================
-# ENV / SECRETS
+# ENV / CONFIG
 # =========================================================
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY")
 FB_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
+TIMEZONE = os.getenv("TIMEZONE", "Asia/Manila")
 
 if not OPENAI_KEY:
     raise Exception("OPENAI_API_KEY missing")
@@ -20,96 +24,99 @@ if not FB_TOKEN or not FB_PAGE_ID:
 
 client = OpenAI(api_key=OPENAI_KEY)
 
-# =========================================================
-# PATHS
-# =========================================================
-FONT_PATH = "fonts/LibreBaskerville-Regular.ttf"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FONT_DIR = BASE_DIR  # fonts are in repo root
+
+FONT_MAIN = os.path.join(FONT_DIR, "LibreBaskerville-Regular.ttf")
+FONT_WATERMARK = os.path.join(FONT_DIR, "IBMPlexMono-Regular.ttf")
+
 WATERMARK_TEXT = "© Yesterday's Letters"
 
 # =========================================================
-# HUMAN THOUGHT BANK (NO LLM)
+# ENGAGEMENT WINDOWS (PH TIME)
+# =========================================================
+POST_WINDOWS = [
+    (7, 9),    # morning
+    (11, 13),  # midday
+    (19, 21),  # evening
+]
+
+def is_good_posting_time():
+    tz = pytz.timezone(TIMEZONE)
+    hour = datetime.now(tz).hour
+    return any(start <= hour < end for start, end in POST_WINDOWS)
+
+def already_posted_today():
+    today = datetime.now(pytz.timezone(TIMEZONE)).strftime("%Y-%m-%d")
+    if os.path.exists("last_post.txt"):
+        with open("last_post.txt") as f:
+            return f.read().strip() == today
+    return False
+
+def mark_posted():
+    today = datetime.now(pytz.timezone(TIMEZONE)).strftime("%Y-%m-%d")
+    with open("last_post.txt", "w") as f:
+        f.write(today)
+
+# =========================================================
+# CURATED HUMAN THOUGHT BANK (NO LLM)
 # =========================================================
 THOUGHT_BANK = {
-    "prayer": [
+    "rain": [
         "Some nights, faith is the only shelter.",
-        "Please God, let me win this time.",
-        "I don’t have answers, only prayers."
+        "I whispered prayers I didn’t know how to say out loud.",
+        "God hears you, even in the rain."
     ],
-    "uncertainty": [
-        "I don’t know where this road leads, but I keep walking.",
-        "Nothing feels certain, except that I must continue."
-    ],
-    "reflection": [
+    "forest": [
         "Growth is quiet when no one is watching.",
-        "I didn’t realize I was healing until it stopped hurting."
+        "I stayed long enough to hear myself think.",
+        "Not everything that’s slow is lost."
     ],
-    "hope": [
-        "May you receive what you’ve been praying for in 2026.",
-        "God has a plan. Trust, wait, and believe."
+    "road": [
+        "I didn’t know where I was going, only that I had to keep walking.",
+        "Faith sometimes looks like taking the next step.",
+        "The road teaches patience."
+    ],
+    "water": [
+        "Still waters teach louder lessons.",
+        "I sat with my thoughts until they softened.",
+        "Some answers come quietly."
+    ],
+    "night": [
+        "God has a plan. Trust, wait, and believe.",
+        "The stars remind me I’m not alone.",
+        "I learned to rest under the same sky."
     ]
 }
 
 # =========================================================
-# SCENE → EMOTION → PROMPT
+# SCENE → EMOTION PAIRING
 # =========================================================
-SCENES = {
-    "night_rain": {
-        "emotion": "prayer",
-        "prompt": (
-            "A solitary figure standing under an umbrella in heavy night rain, "
-            "wet pavement reflecting warm street lights, quiet street, deep shadows"
-        )
-    },
-    "forest": {
-        "emotion": "reflection",
-        "prompt": (
-            "A lone figure standing in a dense forest clearing at dusk, "
-            "soft moonlight filtering through trees, stillness, depth"
-        )
-    },
-    "road": {
-        "emotion": "uncertainty",
-        "prompt": (
-            "A person standing on an empty road at twilight, road disappearing into distance, "
-            "vast sky, quiet uncertainty"
-        )
-    },
-    "water": {
-        "emotion": "hope",
-        "prompt": (
-            "A figure sitting near calm water at night, gentle reflections, stars above, "
-            "peaceful atmosphere"
-        )
-    }
+SCENE_STYLES = {
+    "rain": "rainy night street, umbrella, soft streetlights, reflective pavement",
+    "forest": "quiet forest clearing, moonlight through trees",
+    "road": "empty road at dusk, long shadows, distant horizon",
+    "water": "calm lake at night, stars reflected on water",
+    "night": "open night sky, gentle starlight, peaceful stillness"
 }
 
 STATIC_STYLE = (
-    "Studio Ghibli–inspired cinematic illustration with realistic lighting. "
-    "Physically accurate soft shadows, subtle bloom, nostalgic mood, "
-    "painterly textures, restrained line work, film grain, emotional stillness."
+    "Studio Ghibli inspired illustration with realistic cinematic lighting. "
+    "Soft bloom, natural shadows, gentle atmospheric depth. "
+    "Painterly textures, restrained line work, nostalgic mood."
 )
 
-# =========================================================
-# 1. SELECT SCENE + TEXT
-# =========================================================
-def select_concept():
-    scene_key = random.choice(list(SCENES.keys()))
-    scene = SCENES[scene_key]
-
-    emotion = scene["emotion"]
-    text = random.choice(THOUGHT_BANK[emotion])
-
-    prompt = f"{scene['prompt']}. {STATIC_STYLE}"
-
-    print("SCENE:", scene_key)
-    print("TEXT:", text)
-
-    return text, prompt
+def choose_scene_and_text():
+    scene = random.choice(list(THOUGHT_BANK.keys()))
+    text = random.choice(THOUGHT_BANK[scene])
+    return scene, text
 
 # =========================================================
-# 2. IMAGE GENERATION (SUPPORTED SIZE)
+# IMAGE GENERATION
 # =========================================================
-def generate_image(prompt):
+def generate_image(scene):
+    prompt = f"{SCENE_STYLES[scene]}. {STATIC_STYLE}"
+
     r = client.images.generate(
         model="gpt-image-1",
         prompt=prompt,
@@ -120,123 +127,124 @@ def generate_image(prompt):
     image_b64 = r.data[0].b64_json
     return BytesIO(base64.b64decode(image_b64))
 
-# =========================================================
-# 3. SAFE CROP TO 4:5 (1024x1280)
-# =========================================================
 def crop_to_4_5(img):
     target_height = int(img.width * 5 / 4)
     top = (img.height - target_height) // 2
     return img.crop((0, top, img.width, top + target_height))
 
 # =========================================================
-# 4. SMART TEXT PLACEMENT + TYPOGRAPHY
+# SMART TYPOGRAPHY
 # =========================================================
+def is_dark_region(img, box):
+    crop = img.crop(box).convert("L")
+    brightness = ImageStat.Stat(crop).mean[0]
+    return brightness < 130
+
 def add_text(image_buffer, text):
     img = Image.open(image_buffer).convert("RGBA")
     img = crop_to_4_5(img)
 
-    draw = ImageDraw.Draw(img)
+    draw_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(draw_layer)
 
-    FONT_SIZE = 42
-    LINE_HEIGHT = int(FONT_SIZE * 1.3)
-    TEXT_BOX_HEIGHT = 220
-    MAX_TEXT_WIDTH = int(img.width * 0.58)
+    font_main = ImageFont.truetype(FONT_MAIN, 44)
+    font_mark = ImageFont.truetype(FONT_WATERMARK, 22)
 
-    font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
-    watermark_font = ImageFont.truetype(FONT_PATH, 26)
+    # Fixed text box (prevents drift)
+    box_width = int(img.width * 0.72)
+    box_height = 220
+    box_x = (img.width - box_width) // 2
 
-    # ---- Candidate regions (y start positions)
-    regions = [
+    # Candidate Y positions (safe zones)
+    y_positions = [
         int(img.height * 0.18),
-        int(img.height * 0.30),
-        int(img.height * 0.42),
-        int(img.height * 0.55),
-        int(img.height * 0.68),
+        int(img.height * 0.35),
+        int(img.height * 0.55)
     ]
 
-    def region_score(y):
-        box = img.crop((0, y, img.width, y + TEXT_BOX_HEIGHT)).convert("L")
-        stat = ImageStat.Stat(box)
-        return stat.var[0]  # lower variance = quieter background
+    chosen_y = y_positions[0]
+    for y in y_positions:
+        region = (box_x, y, box_x + box_width, y + box_height)
+        if is_dark_region(img, region):
+            chosen_y = y
+            break
 
-    best_y = min(regions, key=region_score)
+    text_color = (245, 245, 240, 255) if is_dark_region(
+        img, (box_x, chosen_y, box_x + box_width, chosen_y + box_height)
+    ) else (20, 20, 20, 255)
 
-    # ---- Wrap text by pixel width
+    # Wrap manually
     words = text.split()
-    lines = []
-    current = ""
-
+    lines, line = [], ""
     for w in words:
-        test = current + (" " if current else "") + w
-        if draw.textbbox((0, 0), test, font=font)[2] <= MAX_TEXT_WIDTH:
-            current = test
+        test = f"{line} {w}".strip()
+        if draw.textlength(test, font=font_main) <= box_width:
+            line = test
         else:
-            lines.append(current)
-            current = w
-    if current:
-        lines.append(current)
+            lines.append(line)
+            line = w
+    lines.append(line)
 
-    # ---- Ensure fixed height (shrink font if needed)
-    while len(lines) * LINE_HEIGHT > TEXT_BOX_HEIGHT:
-        FONT_SIZE -= 2
-        LINE_HEIGHT = int(FONT_SIZE * 1.3)
-        font = ImageFont.truetype(FONT_PATH, FONT_SIZE)
+    total_text_height = len(lines) * 52
+    start_y = chosen_y + (box_height - total_text_height) // 2
 
-    text_height = len(lines) * LINE_HEIGHT
-    y = best_y + (TEXT_BOX_HEIGHT - text_height) // 2
-
-    # ---- Auto contrast detection
-    sample = img.crop((img.width//4, best_y, img.width*3//4, best_y+TEXT_BOX_HEIGHT)).convert("L")
-    brightness = ImageStat.Stat(sample).mean[0]
-
-    if brightness < 120:
-        text_color = (245, 245, 240, 255)
-        shadow = (0, 0, 0, 90)
-    else:
-        text_color = (30, 30, 30, 255)
-        shadow = (255, 255, 255, 80)
-
-    # ---- Draw text
-    for line in lines:
-        w = draw.textbbox((0, 0), line, font=font)[2]
+    for l in lines:
+        w = draw.textlength(l, font=font_main)
         x = (img.width - w) // 2
-        draw.text((x+1, y+1), line, font=font, fill=shadow)
-        draw.text((x, y), line, font=font, fill=text_color)
-        y += LINE_HEIGHT
+        draw.text((x, start_y), l, font=font_main, fill=text_color)
+        start_y += 52
 
-    # ---- Watermark
-    wm_w = draw.textbbox((0, 0), WATERMARK_TEXT, font=watermark_font)[2]
+    # Watermark
+    wm_w = draw.textlength(WATERMARK_TEXT, font=font_mark)
     draw.text(
-        ((img.width - wm_w) // 2, img.height - 48),
+        ((img.width - wm_w) // 2, img.height - 50),
         WATERMARK_TEXT,
-        font=watermark_font,
-        fill=(255, 255, 255, 120)
+        font=font_mark,
+        fill=(255, 255, 255, 140),
     )
 
+    final = Image.alpha_composite(img, draw_layer)
     out = BytesIO()
-    img.convert("RGB").save(out, "JPEG", quality=95)
+    final.convert("RGB").save(out, "JPEG", quality=95)
     out.seek(0)
     return out
 
 # =========================================================
-# 5. FACEBOOK POST
+# FACEBOOK POST
 # =========================================================
 def post_to_facebook(image_buffer):
     url = f"https://graph.facebook.com/v19.0/{FB_PAGE_ID}/photos"
-    data = {"access_token": FB_TOKEN}
-    files = {"source": ("image.jpg", image_buffer, "image/jpeg")}
+    data = {
+        "access_token": FB_TOKEN,
+        "published": "true"
+    }
+    files = {
+        "source": ("image.jpg", image_buffer, "image/jpeg")
+    }
 
     r = requests.post(url, data=data, files=files)
     if r.status_code != 200:
         raise Exception(r.text)
 
-    print("Posted successfully")
-
 # =========================================================
 # MAIN
 # =========================================================
 if __name__ == "__main__":
-    text, prompt = select_concept()
-    image = generate_image(prompt)
-    final = add_text(image, text)
-    post_to_facebook(final)
+    if not is_good_posting_time():
+        print("Outside engagement window. Skipping.")
+        exit(0)
+
+    if already_posted_today():
+        print("Already posted today. Skipping.")
+        exit(0)
+
+    scene, text = choose_scene_and_text()
+    print("SCENE:", scene)
+    print("TEXT:", text)
+
+    image_buffer = generate_image(scene)
+    final_image = add_text(image_buffer, text)
+    post_to_facebook(final_image)
+    mark_posted()
+
+    print("Post successful.")
