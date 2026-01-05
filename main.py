@@ -33,7 +33,7 @@ else:
 # =========================================================
 # COST CONTROL
 # =========================================================
-POST_WINDOWS = [(19, 24)]  # 7–10 PM (expanded for testing)
+POST_WINDOWS = [(19, 22)]  # 7–10 PM (expanded for testing)
 LAST_POST_FILE = "last_post.txt"
 HOLIDAY_HISTORY_FILE = "holiday_history.json"
 
@@ -46,6 +46,8 @@ KILL_SWITCH_FILE = "posting_disabled.flag"
 
 MAX_MONTHLY_IMAGES = 30
 THOUGHT_COOLDOWN_DAYS = 35  # Full month + buffer to prevent recycling
+SCENE_COOLDOWN_DAYS = 5     # Avoid same scene within 5 days
+SCENE_HISTORY_FILE = "scene_history.json"
 
 def is_good_posting_time():
     tz = pytz.timezone(TIMEZONE)
@@ -293,11 +295,15 @@ SCENE_PROMPTS = {
 }
 
 STATIC_STYLE = (
-    "Studio Ghibli anime illustration with hyper-realistic lighting and shadows. "
-    "Warm dappled sunlight, natural shadow casting, detailed reflections on water and surfaces. "
-    "Vibrant saturated colors, dramatic volumetric clouds, soft bloom effects. "
-    "Rich environmental textures, lush vegetation, cozy lived-in atmosphere. "
-    "Cinematic composition with depth, atmospheric perspective, and nostalgic mood."
+    "High quality anime illustration, trending on ArtStation. "
+    "Hyper-detailed backgrounds with realistic cinematic lighting. "
+    "Warm golden hour sunlight with dappled shadows and light rays. "
+    "Vibrant saturated colors, dramatic volumetric clouds. "
+    "Crystal clear water with perfect reflections. "
+    "Soft bloom and atmospheric haze effects. "
+    "Rich environmental details, lush green vegetation. "
+    "Cozy lo-fi aesthetic with nostalgic summer mood. "
+    "Professional digital painting, 8K ultra detailed."
 )
 
 # =========================================================
@@ -355,7 +361,22 @@ def choose_scene_and_text():
         scene = random.choice(list(SCENE_PROMPTS.keys()))
         return scene, text
     
-    # 3. Apply seasonal preference if applicable
+    # 3. Compute available scenes (with cooldown check)
+    scene_history = load_json_file(SCENE_HISTORY_FILE)
+    recent_scenes = []
+    for s, date_str in scene_history.items():
+        try:
+            used_dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=pytz.timezone(TIMEZONE))
+            if (today_dt - used_dt).days < SCENE_COOLDOWN_DAYS:
+                recent_scenes.append(s)
+        except:
+            pass
+    
+    available_scenes = [s for s in SCENE_PROMPTS.keys() if s not in recent_scenes]
+    if not available_scenes:
+        available_scenes = list(SCENE_PROMPTS.keys())  # Fallback if all on cooldown
+    
+    # 4. Apply seasonal preference if applicable
     current_month = today_dt.strftime("%m")
     preferred_categories = SEASONAL_MAP.get(current_month, [])
     
@@ -365,12 +386,12 @@ def choose_scene_and_text():
             if DRY_RUN:
                 print(f"Applying seasonal filter for month {current_month}: {preferred_categories}")
             category, text = random.choice(seasonal_eligible)
-            scene = random.choice(list(SCENE_PROMPTS.keys()))
+            scene = random.choice(available_scenes)
             return scene, text
     
-    # 4. Pick random from full valid list
+    # 5. Pick random from full valid list
     category, text = random.choice(all_eligible)
-    scene = random.choice(list(SCENE_PROMPTS.keys()))
+    scene = random.choice(available_scenes)
     return scene, text
 
 # =========================================================
@@ -628,6 +649,10 @@ if __name__ == "__main__":
             mark_posted_today()
             increment_monthly_cap()
             update_thought_history(text)
+            # Track used scene to ensure variety
+            scene_history = load_json_file(SCENE_HISTORY_FILE)
+            scene_history[scene_name] = datetime.now(pytz.timezone(TIMEZONE)).strftime("%Y-%m-%d")
+            save_json_file(SCENE_HISTORY_FILE, scene_history)
             if is_holiday:
                 mark_holiday_used(holiday["name"])
             
@@ -642,5 +667,3 @@ if __name__ == "__main__":
         log_engagement(scene_name, text, f"FAILED: {e}")
         log_error(e)
         exit(1)
-
-
