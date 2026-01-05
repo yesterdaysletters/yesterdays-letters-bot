@@ -106,9 +106,7 @@ def update_thought_history(thought_text):
     today = datetime.now(pytz.timezone(TIMEZONE)).strftime("%Y-%m-%d")
     history[thought_text] = today # Key is thought, value is last used date
     
-    # Optional: cleanup old entries to keep file small
-    cutoff = datetime.now(pytz.timezone(TIMEZONE)) - requests.structures.CaseInsensitiveDict() 
-    # Actually simple dict cleanup is complex without importing timedelta, skipping cleanup for now.
+    # Note: Old entry cleanup skipped - would require timedelta import
     
     save_json_file(THOUGHT_HISTORY_FILE, history)
 
