@@ -37,7 +37,7 @@ POST_WINDOWS = [(19, 21)]  # 7–9 PM ONLY
 LAST_POST_FILE = "last_post.txt"
 HOLIDAY_HISTORY_FILE = "holiday_history.json"
 
-# NEW STATE FILES
+# STATE FILES
 MONTHLY_USAGE_FILE = "monthly_usage.json"
 THOUGHT_HISTORY_FILE = "thought_history.json"
 ENGAGEMENT_LOG_FILE = "engagement_log.csv"
@@ -45,7 +45,7 @@ ERROR_LOG_FILE = "error_log.txt"
 KILL_SWITCH_FILE = "posting_disabled.flag"
 
 MAX_MONTHLY_IMAGES = 30
-THOUGHT_COOLDOWN_DAYS = 14
+THOUGHT_COOLDOWN_DAYS = 35  # Full month + buffer to prevent recycling
 
 def is_good_posting_time():
     tz = pytz.timezone(TIMEZONE)
@@ -65,7 +65,7 @@ def mark_posted_today():
         f.write(today)
 
 # =========================================================
-# NEW FEATURE LOGIC
+# FEATURE LOGIC
 # =========================================================
 def check_kill_switch():
     if os.path.exists(KILL_SWITCH_FILE):
@@ -113,10 +113,7 @@ def get_thought_cooldown_history():
 def update_thought_history(thought_text):
     history = get_thought_cooldown_history()
     today = datetime.now(pytz.timezone(TIMEZONE)).strftime("%Y-%m-%d")
-    history[thought_text] = today # Key is thought, value is last used date
-    
-    # Note: Old entry cleanup skipped - would require timedelta import
-    
+    history[thought_text] = today
     save_json_file(THOUGHT_HISTORY_FILE, history)
 
 def log_engagement(scene, thought, status="POSTED"):
@@ -161,55 +158,150 @@ def check_token_health():
 
 
 # =========================================================
-# CURATED HUMAN THOUGHT BANK (NO LLM)
+# CURATED HUMAN THOUGHT BANK - 38 UNIQUE THOUGHTS
 # =========================================================
 THOUGHT_BANK = {
-    "rain": [
-        "Some nights, faith is the only shelter.",
-        "I whispered prayers I didn’t know how to say out loud.",
-        "God hears you, even in the rain."
-    ],
-    "forest": [
+    # GROWTH & PATIENCE (7)
+    "growth": [
         "Growth is quiet when no one is watching.",
-        "Not everything that’s slow is lost.",
-        "I stayed long enough to hear myself think."
+        "Not everything that's slow is lost.",
+        "I stayed long enough to hear myself think.",
+        "Becoming who you're meant to be takes time.",
+        "Some seasons are just for learning, not harvesting.",
+        "You are not behind. You are exactly where you need to be.",
+        "The version of you that's coming will be worth the wait.",
     ],
-    "road": [
-        "I didn’t know where I was going, only that I had to keep walking.",
-        "The road teaches patience.",
-        "Faith sometimes looks like the next step."
-    ],
-    "water": [
-        "Still waters teach louder lessons.",
-        "Some answers arrive gently.",
-        "I let go of what I could no longer carry."
-    ],
-    "night": [
+    # FAITH & TRUST (7)
+    "faith": [
+        "Some nights, faith is the only shelter.",
+        "I whispered prayers I didn't know how to say out loud.",
+        "God hears you, even in the rain.",
         "God has a plan. Trust, wait, and believe.",
         "Even here, I was not forgotten.",
-        "The stars stayed with me."
-    ]
+        "Faith sometimes looks like the next step.",
+        "When you can't see the path, trust the One who does.",
+    ],
+    # LOVE & CONNECTION (6)
+    "love": [
+        "Some friendships are answers to prayers we never said out loud.",
+        "Love is choosing patience when it would be easier to leave.",
+        "The people who stay are the ones who matter.",
+        "Not every connection is meant to last, but some are meant to teach.",
+        "You are someone's reason to believe in kindness.",
+        "Home isn't always a place. Sometimes it's a person.",
+    ],
+    # HEALING & LETTING GO (6)
+    "healing": [
+        "I let go of what I could no longer carry.",
+        "Healing doesn't mean forgetting. It means it no longer controls you.",
+        "Some goodbyes are blessings in disguise.",
+        "You don't have to carry yesterday into tomorrow.",
+        "Rest is not quitting. It's preparation.",
+        "It's okay to outgrow who you used to be.",
+    ],
+    # HOPE & NEW BEGINNINGS (7)
+    "hope": [
+        "The stars stayed with me.",
+        "Still waters teach louder lessons.",
+        "Some answers arrive gently.",
+        "Hope often arrives quietly, not loudly.",
+        "Every ending is just a new beginning wearing a disguise.",
+        "The light you're looking for might already be inside you.",
+        "Tomorrow is unwritten. That's the beauty of it.",
+    ],
+    # PEACE & SOLITUDE (5)
+    "peace": [
+        "I didn't know where I was going, only that I had to keep walking.",
+        "The road teaches patience.",
+        "Silence isn't empty. It's full of answers.",
+        "Peace isn't the absence of storms. It's finding calm within them.",
+        "Sometimes doing nothing is the bravest thing you can do.",
+    ],
 }
 
 # =========================================================
-# SCENE → PROMPT
+# SCENE → DETAILED PROMPTS (12 HIGH-QUALITY SCENES)
 # =========================================================
 SCENE_PROMPTS = {
-    "rain": "night rain, umbrella, wet pavement, soft streetlights",
-    "forest": "quiet forest clearing, moonlight through trees",
-    "road": "empty road at dusk, long shadows, distant horizon",
-    "water": "calm lake at night, stars reflected on water",
-    "night": "open night sky, gentle starlight, peaceful stillness"
+    # COZY INTERIOR SCENES
+    "cozy_kitchen": (
+        "Cozy kitchen with open French window overlooking a sparkling lake at golden hour, "
+        "morning sunlight streaming in casting warm dappled shadows on terracotta tiles, "
+        "potted herbs on windowsill, vintage kettle, lived-in details, birds flying in bright blue sky"
+    ),
+    "seaside_cafe": (
+        "Black cat sitting in rustic seaside café doorway gazing at turquoise ocean, "
+        "polished wooden floors reflecting warm afternoon sunlight, glass jars on shelves, "
+        "stone patio with potted flowers, gentle waves, fluffy clouds on horizon"
+    ),
+    "window_rain": (
+        "Person reading book by large window during gentle rainstorm, cozy interior lighting, "
+        "warm lamp glow, rain streaking down glass, city lights blurred outside, "
+        "cup of tea steaming, comfortable blanket, peaceful solitude"
+    ),
+    
+    # NATURE & OUTDOOR SCENES
+    "countryside_hill": (
+        "Boy with backpack sitting under massive ancient oak tree on grassy hillside, "
+        "overlooking peaceful pastoral village with red rooftops below, golden hour sunlight, "
+        "wildflowers swaying, distant mountains, fluffy cumulus clouds, nostalgic summer afternoon"
+    ),
+    "lake_boat": (
+        "Young couple in small wooden rowboat drifting under overhanging fruit tree branches, "
+        "dappled sunlight filtering through bright green leaves, crystal clear water with perfect reflections, "
+        "one person reading book, peaceful summer day, orange fruit hanging from branches"
+    ),
+    "forest_stream": (
+        "Person carefully crossing moss-covered stepping stones across gentle forest stream, "
+        "golden light rays piercing through dense tree canopy, shallow water reflecting trees, "
+        "ferns and wildflowers on banks, misty atmosphere, magical woodland feeling"
+    ),
+    "flower_field": (
+        "Person walking alone through vast wildflower meadow at sunset, "
+        "purple and yellow flowers stretching to distant blue mountains, "
+        "warm golden light, hair blowing gently in breeze, sense of freedom and peace"
+    ),
+    
+    # ADVENTURE & TRAVEL SCENES
+    "beach_cottage": (
+        "Vintage turquoise VW van parked by weathered beach cottage, "
+        "crystal turquoise waves lapping sandy shore, surfboards leaning against cottage, "
+        "palm tree shadows on sand, bright sunflowers blooming, tropical paradise afternoon"
+    ),
+    "starlit_camp": (
+        "Two friends sitting around warm campfire next to vintage camper van, "
+        "spectacular Milky Way stretching across dark blue night sky, "
+        "distant mountains silhouetted, warm firelight on faces, peaceful stargazing, fireflies"
+    ),
+    "rooftop_sunset": (
+        "Person sitting alone on city rooftop watching dramatic sunset, "
+        "warm orange and pink clouds filling sky, city skyline silhouettes below, "
+        "potted plants around, string lights not yet lit, contemplative moment"
+    ),
+    
+    # NIGHT & CONTEMPLATIVE SCENES
+    "night_balcony": (
+        "Person leaning on apartment balcony railing overlooking city lights at night, "
+        "stars visible above light pollution, warm interior light spilling out, "
+        "plants in terracotta pots, distant traffic, quiet reflection moment"
+    ),
+    "rainy_street": (
+        "Person with clear umbrella walking on rainy evening city street, "
+        "neon shop signs reflecting in wet pavement puddles, warm yellow streetlights, "
+        "other pedestrians with umbrellas, cozy restaurant windows glowing, cinematic atmosphere"
+    ),
 }
 
 STATIC_STYLE = (
-    "Studio Ghibli inspired illustration with realistic cinematic lighting. "
-    "Soft bloom, natural shadows, gentle atmospheric depth. "
-    "Painterly textures, restrained line work, nostalgic mood."
+    "Studio Ghibli anime illustration with hyper-realistic lighting and shadows. "
+    "Warm dappled sunlight, natural shadow casting, detailed reflections on water and surfaces. "
+    "Makoto Shinkai inspired vibrant colors and cloud details. "
+    "Rich environmental textures, lush vegetation, cozy lived-in atmosphere. "
+    "Cinematic composition with depth, atmospheric perspective, and nostalgic mood."
 )
 
 # =========================================================
-# MONTHLY VISUAL THEMES (NO EXTRA COST)
+# MONTHLY VISUAL THEMES
 # =========================================================
 MONTHLY_THEMES = {
     "01": "Cool blue tones, quiet beginnings, minimal contrast.",
@@ -230,11 +322,12 @@ def get_monthly_theme():
     month = datetime.now(pytz.timezone(TIMEZONE)).strftime("%m")
     return MONTHLY_THEMES.get(month, "")
 
-# Seasonal Map: Month -> List of preferred scenes
+# Seasonal Map: Month -> List of preferred thought categories
 SEASONAL_MAP = {
-    "12": ["night", "snow"],
-    "10": ["forest", "night"],
-    "01": ["rain", "night"],
+    "12": ["hope", "faith"],
+    "01": ["hope", "growth"],
+    "02": ["love"],
+    "10": ["healing", "peace"],
 }
 
 def choose_scene_and_text():
@@ -242,56 +335,60 @@ def choose_scene_and_text():
     history = get_thought_cooldown_history()
     today_dt = datetime.now(pytz.timezone(TIMEZONE))
     
-    # NEW: Seasonal Filtering
-    current_month = today_dt.strftime("%m")
-    preferred_scenes = SEASONAL_MAP.get(current_month, [])
-    
-    # 2. Filter eligible thoughts
+    # 2. Filter eligible thoughts (not on cooldown)
     all_eligible = []
     
-    for scene, thoughts in THOUGHT_BANK.items():
+    for category, thoughts in THOUGHT_BANK.items():
         for t in thoughts:
             last_used_str = history.get(t)
             if last_used_str:
                 last_used_dt = datetime.strptime(last_used_str, "%Y-%m-%d").replace(tzinfo=pytz.timezone(TIMEZONE))
                 days_diff = (today_dt - last_used_dt).days
                 if days_diff < THOUGHT_COOLDOWN_DAYS:
-                    continue # Skip if used recently
-            all_eligible.append((scene, t))
+                    continue  # Skip if used recently
+            all_eligible.append((category, t))
     
     if not all_eligible:
         # Fallback if literally everything is on cooldown
-        scene = random.choice(list(THOUGHT_BANK.keys()))
-        text = random.choice(THOUGHT_BANK[scene])
+        category = random.choice(list(THOUGHT_BANK.keys()))
+        text = random.choice(THOUGHT_BANK[category])
+        scene = random.choice(list(SCENE_PROMPTS.keys()))
         return scene, text
-
-    # Filter by season if applicable
-    if preferred_scenes:
-        seasonal_eligible = [x for x in all_eligible if x[0] in preferred_scenes]
+    
+    # 3. Apply seasonal preference if applicable
+    current_month = today_dt.strftime("%m")
+    preferred_categories = SEASONAL_MAP.get(current_month, [])
+    
+    if preferred_categories:
+        seasonal_eligible = [x for x in all_eligible if x[0] in preferred_categories]
         if seasonal_eligible:
             if DRY_RUN:
-                print(f"Applying seasonal filter for month {current_month}: {preferred_scenes}")
-            return random.choice(seasonal_eligible)
+                print(f"Applying seasonal filter for month {current_month}: {preferred_categories}")
+            category, text = random.choice(seasonal_eligible)
+            scene = random.choice(list(SCENE_PROMPTS.keys()))
+            return scene, text
     
     # 4. Pick random from full valid list
-    return random.choice(all_eligible)
+    category, text = random.choice(all_eligible)
+    scene = random.choice(list(SCENE_PROMPTS.keys()))
+    return scene, text
 
 # =========================================================
 # HOLIDAY POSTS — EXACT DATE ONLY
 # =========================================================
 HOLIDAY_POSTS = {
-    (1, 1):  {"name": "new_year", "text": "This year, I’m learning to walk slower and trust God more.", "scene": "quiet lakeside at dawn"},
-    (2, 14): {"name": "valentines", "text": "Love is choosing patience when it would be easier to leave.", "scene": "evening street lights, two figures walking"},
-    (3, 8):  {"name": "womens_day", "text": "Strong women don’t always speak loudly. Sometimes they endure quietly.", "scene": "woman by window, morning light"},
-    (4, 1):  {"name": "april_fools", "text": "Not everything that looks like failure is the end of the story.", "scene": "winding road, light through clouds"},
-    (5, 1):  {"name": "labor_may", "text": "The work you do in silence still matters.", "scene": "worker resting at sunset"},
-    (6, 1):  {"name": "pride", "text": "You are allowed to exist without explaining yourself.", "scene": "person standing in open field at sunrise"},
-    (7, 4):  {"name": "independence", "text": "Freedom begins when fear no longer decides for you.", "scene": "open road under wide sky"},
-    (8, 4):  {"name": "friendship", "text": "Some friendships are answers to prayers we never said out loud.", "scene": "two silhouettes at golden hour"},
-    (9, 1):  {"name": "labor_sep", "text": "Rest is not quitting. It’s preparation.", "scene": "empty park bench, late afternoon"},
-    (10, 31):{"name": "halloween", "text": "Not everything hidden is dangerous. Some things are healing.", "scene": "foggy forest path, lantern glow"},
-    (11, 28):{"name": "thanksgiving", "text": "Gratitude doesn’t erase pain, but it softens the weight.", "scene": "table by window, autumn light"},
-    (12, 25):{"name": "christmas", "text": "Hope often arrives quietly, not loudly.", "scene": "snowy street at night, warm windows"},
+    (1, 1):  {"name": "new_year", "text": "This year, I'm learning to walk slower and trust God more.", "scene": "quiet lakeside at dawn, person sitting on dock watching sunrise, mist over water"},
+    (2, 14): {"name": "valentines", "text": "Love is choosing patience when it would be easier to leave.", "scene": "couple walking hand in hand on evening street with warm cafe lights"},
+    (3, 8):  {"name": "womens_day", "text": "Strong women don't always speak loudly. Sometimes they endure quietly.", "scene": "woman by window with morning light streaming in, cup of coffee, peaceful strength"},
+    (4, 1):  {"name": "april_fools", "text": "Not everything that looks like failure is the end of the story.", "scene": "winding road through hills with light breaking through clouds, hopeful journey"},
+    (5, 1):  {"name": "labor_may", "text": "The work you do in silence still matters.", "scene": "worker resting at sunset, overlooking completed work, peaceful exhaustion"},
+    (6, 1):  {"name": "pride", "text": "You are allowed to exist without explaining yourself.", "scene": "person standing in open field at sunrise, arms open, freedom"},
+    (7, 4):  {"name": "independence", "text": "Freedom begins when fear no longer decides for you.", "scene": "open road under wide dramatic sky, journey ahead"},
+    (8, 4):  {"name": "friendship", "text": "Some friendships are answers to prayers we never said out loud.", "scene": "two friends sitting on hillside at golden hour, laughing together"},
+    (9, 1):  {"name": "labor_sep", "text": "Rest is not quitting. It's preparation.", "scene": "empty park bench under shady tree, late afternoon dappled light"},
+    (10, 31):{"name": "halloween", "text": "Not everything hidden is dangerous. Some things are healing.", "scene": "foggy forest path with lantern glow, mysterious but peaceful"},
+    (11, 28):{"name": "thanksgiving", "text": "Gratitude doesn't erase pain, but it softens the weight.", "scene": "warm dinner table by window with autumn light, family gathering"},
+    (12, 25):{"name": "christmas", "text": "Hope often arrives quietly, not loudly.", "scene": "snowy street at night with warm glowing windows, peaceful christmas eve"},
 }
 
 def load_holiday_history():
@@ -452,7 +549,7 @@ if __name__ == "__main__":
     # Validate fonts exist before making any API calls
     validate_fonts()
     
-    # NEW: Token Health Check
+    # Token Health Check
     if not check_token_health():
         print("Token Health Check Failed. Kill switch enabled. Exiting.")
         exit(1)
@@ -483,7 +580,7 @@ if __name__ == "__main__":
         scene_name, text = choose_scene_and_text()
         scene_prompt = SCENE_PROMPTS[scene_name]
         is_holiday = False
-        print("REGULAR POST")
+        print(f"REGULAR POST: {scene_name}")
 
     # 5. GENERATE & POST (COSTS MONEY)
     try:
