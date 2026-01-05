@@ -33,7 +33,7 @@ else:
 # =========================================================
 # COST CONTROL
 # =========================================================
-POST_WINDOWS = [(19, 21)]  # 7–9 PM ONLY
+POST_WINDOWS = [(19, 22)]  # 7–9 PM ONLY
 LAST_POST_FILE = "last_post.txt"
 HOLIDAY_HISTORY_FILE = "holiday_history.json"
 
@@ -607,3 +607,4 @@ if __name__ == "__main__":
         log_engagement(scene_name, text, f"FAILED: {e}")
         log_error(e)
         exit(1)
+
