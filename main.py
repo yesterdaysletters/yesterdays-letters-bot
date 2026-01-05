@@ -9,7 +9,7 @@ from datetime import datetime, date
 import pytz
 
 from openai import OpenAI
-from PIL import Image, ImageDraw, ImageFont, ImageStat
+from PIL import Image, ImageDraw, ImageFont, ImageStat, ImageFilter
 
 # =========================================================
 # ENV / CONFIG
@@ -33,7 +33,7 @@ else:
 # =========================================================
 # COST CONTROL
 # =========================================================
-POST_WINDOWS = [(19, 23)]  # 7–10 PM (expanded for testing)
+POST_WINDOWS = [(19, 22)]  # 7–10 PM (expanded for testing)
 LAST_POST_FILE = "last_post.txt"
 HOLIDAY_HISTORY_FILE = "holiday_history.json"
 
@@ -469,46 +469,81 @@ def add_text(image_buffer, text):
     img = Image.open(image_buffer).convert("RGBA")
     img = crop_to_4_5(img)
 
-    draw_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(draw_layer)
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
 
-    font = ImageFont.truetype(FONT_MAIN, 42)
-    box_w = int(img.width * 0.72)
-    box_h = 220
-    box_x = (img.width - box_w) // 2
-    box_y = int(img.height * 0.45)
+    # ---- TYPOGRAPHY SCALE (smaller, calmer) ----
+    FONT_SIZE = 38 if len(text) <= 90 else 34
+    LINE_HEIGHT = int(FONT_SIZE * 1.35)
 
-    dark = is_dark(img, (box_x, box_y, box_x + box_w, box_y + box_h))
-    color = (245, 245, 240, 255) if dark else (30, 30, 30, 255)
+    font = ImageFont.truetype(FONT_MAIN, FONT_SIZE)
 
+    # ---- FIXED TEXT BOX (prevents drift) ----
+    BOX_WIDTH = int(img.width * 0.70)
+    BOX_HEIGHT = LINE_HEIGHT * 4
+    BOX_X = (img.width - BOX_WIDTH) // 2
+
+    # ---- SMART VERTICAL ZONES (top / middle / lower-mid) ----
+    candidate_ys = [
+        int(img.height * 0.30),
+        int(img.height * 0.45),
+        int(img.height * 0.58),
+    ]
+
+    def zone_score(y):
+        crop = img.crop((BOX_X, y, BOX_X + BOX_WIDTH, y + BOX_HEIGHT)).convert("L")
+        stat = ImageStat.Stat(crop)
+        edges = crop.filter(ImageFilter.FIND_EDGES)
+        edge_stat = ImageStat.Stat(edges)
+        return stat.stddev[0] + edge_stat.mean[0]
+
+    BOX_Y = min(candidate_ys, key=zone_score)
+
+    # ---- LIGHT / DARK AUTO-DETECT ----
+    luminance = ImageStat.Stat(
+        img.crop((BOX_X, BOX_Y, BOX_X + BOX_WIDTH, BOX_Y + BOX_HEIGHT)).convert("L")
+    ).mean[0]
+
+    TEXT_COLOR = (245, 245, 240, 255) if luminance < 135 else (30, 30, 30, 255)
+    SHADOW_COLOR = (0, 0, 0, 70) if luminance < 135 else (0, 0, 0, 40)
+
+    # ---- LINE WRAPPING ----
     words = text.split()
-    lines, line = [], ""
+    lines, current = [], ""
+
     for w in words:
-        test = f"{line} {w}".strip()
-        if draw.textlength(test, font=font) <= box_w:
-            line = test
+        test = f"{current} {w}".strip()
+        if draw.textlength(test, font=font) <= BOX_WIDTH:
+            current = test
         else:
-            lines.append(line)
-            line = w
-    lines.append(line)
+            lines.append(current)
+            current = w
+    lines.append(current)
 
-    y = box_y + (box_h - len(lines) * 54) // 2
-    for l in lines:
-        w = draw.textlength(l, font=font)
-        draw.text(((img.width - w) // 2, y), l, font=font, fill=color)
-        y += 54
+    # ---- VERTICAL CENTERING INSIDE BOX ----
+    y = BOX_Y + (BOX_HEIGHT - len(lines) * LINE_HEIGHT) // 2
 
-    # Watermark
-    font_mark = ImageFont.truetype(FONT_MARK, 28)
-    wm_bbox = draw.textbbox((0, 0), WATERMARK_TEXT, font=font_mark)
+    for line in lines:
+        w = draw.textlength(line, font=font)
+        x = (img.width - w) // 2
+
+        # subtle shadow (legibility only)
+        draw.text((x + 2, y + 2), line, font=font, fill=SHADOW_COLOR)
+        draw.text((x, y), line, font=font, fill=TEXT_COLOR)
+
+        y += LINE_HEIGHT
+
+    # ---- WATERMARK (unchanged, quieter) ----
+    mark_font = ImageFont.truetype(FONT_MAIN, 26)
+    mw = draw.textlength(WATERMARK_TEXT, font=mark_font)
     draw.text(
-        ((img.width - (wm_bbox[2] - wm_bbox[0])) / 2, img.height - 60),
+        ((img.width - mw) // 2, img.height - 58),
         WATERMARK_TEXT,
-        font=font_mark,
-        fill=(255, 255, 255, 140),
+        font=mark_font,
+        fill=(255, 255, 255, 130),
     )
 
-    final = Image.alpha_composite(img, draw_layer)
+    final = Image.alpha_composite(img, overlay)
     out = BytesIO()
     final.convert("RGB").save(out, "JPEG", quality=95)
     out.seek(0)
@@ -607,4 +642,3 @@ if __name__ == "__main__":
         log_engagement(scene_name, text, f"FAILED: {e}")
         log_error(e)
         exit(1)
-
