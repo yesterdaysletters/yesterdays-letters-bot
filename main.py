@@ -222,111 +222,125 @@ THOUGHT_BANK = {
 }
 
 # =========================================================
-# SCENE → DETAILED PROMPTS (12 HIGH-QUALITY SCENES)
+# RANDOMIZED PROMPT COMPONENTS (HIGH-QUALITY TEMPLATE)
 # =========================================================
-SCENE_PROMPTS = {
-    # COZY INTERIOR SCENES
-    "cozy_kitchen": (
-        "Cozy kitchen with open French window overlooking a sparkling lake at golden hour, "
-        "morning sunlight streaming in casting warm dappled shadows on terracotta tiles, "
-        "potted herbs on windowsill, vintage kettle, lived-in details, birds flying in bright blue sky"
-    ),
-    "seaside_cafe": (
-        "Black cat sitting in rustic seaside café doorway gazing at turquoise ocean, "
-        "polished wooden floors reflecting warm afternoon sunlight, glass jars on shelves, "
-        "stone patio with potted flowers, gentle waves, fluffy clouds on horizon"
-    ),
-    "window_rain": (
-        "Person reading book by large window during gentle rainstorm, cozy interior lighting, "
-        "warm lamp glow, rain streaking down glass, city lights blurred outside, "
-        "cup of tea steaming, comfortable blanket, peaceful solitude"
-    ),
-    
-    # NATURE & OUTDOOR SCENES
-    "countryside_hill": (
-        "Boy with backpack sitting under massive ancient oak tree on grassy hillside, "
-        "overlooking peaceful pastoral village with red rooftops below, golden hour sunlight, "
-        "wildflowers swaying, distant mountains, fluffy cumulus clouds, nostalgic summer afternoon"
-    ),
-    "lake_boat": (
-        "Young couple in small wooden rowboat drifting under overhanging fruit tree branches, "
-        "dappled sunlight filtering through bright green leaves, crystal clear water with perfect reflections, "
-        "one person reading book, peaceful summer day, orange fruit hanging from branches"
-    ),
-    "forest_stream": (
-        "Person carefully crossing moss-covered stepping stones across gentle forest stream, "
-        "golden light rays piercing through dense tree canopy, shallow water reflecting trees, "
-        "ferns and wildflowers on banks, misty atmosphere, magical woodland feeling"
-    ),
-    "flower_field": (
-        "Person walking alone through vast wildflower meadow at sunset, "
-        "purple and yellow flowers stretching to distant blue mountains, "
-        "warm golden light, hair blowing gently in breeze, sense of freedom and peace"
-    ),
-    
-    # ADVENTURE & TRAVEL SCENES
-    "beach_cottage": (
-        "Vintage turquoise VW van parked by weathered beach cottage, "
-        "crystal turquoise waves lapping sandy shore, surfboards leaning against cottage, "
-        "palm tree shadows on sand, bright sunflowers blooming, tropical paradise afternoon"
-    ),
-    "starlit_camp": (
-        "Two friends sitting around warm campfire next to vintage camper van, "
-        "spectacular Milky Way stretching across dark blue night sky, "
-        "distant mountains silhouetted, warm firelight on faces, peaceful stargazing, fireflies"
-    ),
-    "rooftop_sunset": (
-        "Person sitting alone on city rooftop watching dramatic sunset, "
-        "warm orange and pink clouds filling sky, city skyline silhouettes below, "
-        "potted plants around, string lights not yet lit, contemplative moment"
-    ),
-    
-    # NIGHT & CONTEMPLATIVE SCENES
-    "night_balcony": (
-        "Person leaning on apartment balcony railing overlooking city lights at night, "
-        "stars visible above light pollution, warm interior light spilling out, "
-        "plants in terracotta pots, distant traffic, quiet reflection moment"
-    ),
-    "rainy_street": (
-        "Person with clear umbrella walking on rainy evening city street, "
-        "neon shop signs reflecting in wet pavement puddles, warm yellow streetlights, "
-        "other pedestrians with umbrellas, cozy restaurant windows glowing, cinematic atmosphere"
-    ),
+
+# SCENES (what we're looking at)
+SCENES = [
+    {
+        "name": "rural_path",
+        "scene": "A winding dirt path through tall grass overlooking a rural town",
+        "details": "Rolling hills, scattered rooftops, wildflowers along the path"
+    },
+    {
+        "name": "calm_river",
+        "scene": "A calm river with shimmering reflections and overhanging trees",
+        "details": "Mossy riverbanks, water lilies, lush greenery"
+    },
+    {
+        "name": "wooden_boat",
+        "scene": "A small wooden boat drifting quietly beneath leafy branches",
+        "details": "Crystal clear water, dappled light, overhanging fruit trees"
+    },
+    {
+        "name": "countryside_hill",
+        "scene": "A countryside hillside beneath a large shade tree",
+        "details": "Grassy meadow, distant village rooftops, scattered wildflowers"
+    },
+    {
+        "name": "seaside_cabin",
+        "scene": "A cozy seaside cabin surrounded by plants",
+        "details": "Weathered wood, potted flowers, ocean view, sandy path"
+    },
+    {
+        "name": "ocean_kitchen",
+        "scene": "An open kitchen interior overlooking the ocean",
+        "details": "Warm sunlight streaming in, potted herbs, vintage details"
+    },
+    {
+        "name": "campfire_van",
+        "scene": "A parked van in an open field near a quiet campfire",
+        "details": "Open countryside, distant hills, warm firelight glow"
+    },
+    {
+        "name": "village_road",
+        "scene": "A narrow village road winding through rolling hills",
+        "details": "Stone walls, cottages, trees lining the road, peaceful atmosphere"
+    },
+]
+
+# SEASONS + SKY
+SEASONS = {
+    "summer": [
+        "Bright summer sky with towering white cumulus clouds",
+        "Deep blue sky with soft atmospheric haze",
+    ],
+    "autumn": [
+        "Soft golden sky with warm amber clouds",
+        "Clear afternoon sky with drifting autumn leaves",
+    ],
+    "spring_rain": [
+        "Overcast spring sky with gentle rainfall",
+        "Soft gray-blue clouds with light mist",
+    ],
+    "winter": [
+        "Clear winter sky with pale sunlight",
+        "Cold blue sky with thin clouds and crisp air",
+    ],
 }
 
-STATIC_STYLE = (
-    "High quality anime illustration, trending on ArtStation. "
-    "Hyper-detailed backgrounds with realistic cinematic lighting. "
-    "Warm golden hour sunlight with dappled shadows and light rays. "
-    "Vibrant saturated colors, dramatic volumetric clouds. "
-    "Crystal clear water with perfect reflections. "
-    "Soft bloom and atmospheric haze effects. "
-    "Rich environmental details, lush green vegetation. "
-    "Cozy lo-fi aesthetic with nostalgic summer mood. "
-    "Professional digital painting, 8K ultra detailed."
-)
+# LIGHTING OPTIONS
+LIGHTING_OPTIONS = [
+    "Warm midday sunlight with natural dappled shadows",
+    "Low-angle golden hour sunlight casting long shadows",
+    "Cool moonlight softly illuminating the landscape",
+    "Diffused soft light through clouds and mist",
+    "Crisp winter sunlight with cool, elongated shadows",
+]
 
-# =========================================================
-# MONTHLY VISUAL THEMES
-# =========================================================
-MONTHLY_THEMES = {
-    "01": "Cool blue tones, quiet beginnings, minimal contrast.",
-    "02": "Warm highlights, soft shadows, longing and memory.",
-    "03": "Balanced neutral light, sense of becoming.",
-    "04": "Bright diffused light, hopeful softness.",
-    "05": "Clear light, grounded stillness.",
-    "06": "Golden hour warmth, nostalgic glow.",
-    "07": "Cool night tones, silence and depth.",
-    "08": "Muted warmth, waiting and pause.",
-    "09": "Soft desaturation, letting go.",
-    "10": "Higher contrast, cinematic depth.",
-    "11": "Warm interior glow, gratitude.",
-    "12": "Cold nights with small warm lights, quiet hope."
-}
+# ATMOSPHERE + MOTION
+ATMOSPHERE_OPTIONS = [
+    "Soft atmospheric haze with subtle lens flare",
+    "Gentle breeze moving grass and leaves",
+    "Light mist near the horizon with soft light bloom",
+    "Rain ripples on water and wet reflective surfaces",
+    "Still air with faint drifting particles",
+]
 
-def get_monthly_theme():
-    month = datetime.now(pytz.timezone(TIMEZONE)).strftime("%m")
-    return MONTHLY_THEMES.get(month, "")
+# MOOD OPTIONS
+MOOD_OPTIONS = [
+    "Calm, nostalgic, peaceful mood",
+    "Quiet, reflective, emotional mood",
+    "Warm, comforting, tranquil mood",
+    "Serene, contemplative, timeless mood",
+]
+
+def generate_image_prompt(scene_data):
+    """Generate a complete prompt from randomized components."""
+    # Pick random components
+    season_key = random.choice(list(SEASONS.keys()))
+    sky = random.choice(SEASONS[season_key])
+    lighting = random.choice(LIGHTING_OPTIONS)
+    atmosphere = random.choice(ATMOSPHERE_OPTIONS)
+    mood = random.choice(MOOD_OPTIONS)
+    
+    # Build the master prompt
+    prompt = (
+        f"Cinematic anime-style illustration, ultra high detail, 8K quality, painterly digital art. "
+        f"{scene_data['scene']}, with a wide sense of depth and scale. "
+        f"{scene_data['details']}. "
+        f"{sky}. "
+        f"{lighting}. "
+        f"{atmosphere}. "
+        f"Rich saturated colors, detailed foliage and natural textures. "
+        f"{mood}, slice-of-life atmosphere. "
+        f"Anime background art quality, hand-painted look, soft brush textures, realistic lighting, no text, no watermark."
+    )
+    
+    return prompt, season_key
+
+# Keep SCENE_PROMPTS for backwards compatibility (holiday posts use this format)
+SCENE_PROMPTS = {scene["name"]: scene["scene"] for scene in SCENES}
 
 # Seasonal Map: Month -> List of preferred thought categories
 SEASONAL_MAP = {
@@ -358,8 +372,8 @@ def choose_scene_and_text():
         # Fallback if literally everything is on cooldown
         category = random.choice(list(THOUGHT_BANK.keys()))
         text = random.choice(THOUGHT_BANK[category])
-        scene = random.choice(list(SCENE_PROMPTS.keys()))
-        return scene, text
+        scene_data = random.choice(SCENES)
+        return scene_data, text
     
     # 3. Compute available scenes (with cooldown check)
     scene_history = load_json_file(SCENE_HISTORY_FILE)
@@ -372,9 +386,9 @@ def choose_scene_and_text():
         except:
             pass
     
-    available_scenes = [s for s in SCENE_PROMPTS.keys() if s not in recent_scenes]
+    available_scenes = [s for s in SCENES if s["name"] not in recent_scenes]
     if not available_scenes:
-        available_scenes = list(SCENE_PROMPTS.keys())  # Fallback if all on cooldown
+        available_scenes = SCENES  # Fallback if all on cooldown
     
     # 4. Apply seasonal preference if applicable
     current_month = today_dt.strftime("%m")
@@ -386,13 +400,13 @@ def choose_scene_and_text():
             if DRY_RUN:
                 print(f"Applying seasonal filter for month {current_month}: {preferred_categories}")
             category, text = random.choice(seasonal_eligible)
-            scene = random.choice(available_scenes)
-            return scene, text
+            scene_data = random.choice(available_scenes)
+            return scene_data, text
     
     # 5. Pick random from full valid list
     category, text = random.choice(all_eligible)
-    scene = random.choice(available_scenes)
-    return scene, text
+    scene_data = random.choice(available_scenes)
+    return scene_data, text
 
 # =========================================================
 # HOLIDAY POSTS — EXACT DATE ONLY
@@ -448,12 +462,11 @@ def mark_holiday_used(name):
 # =========================================================
 # IMAGE GENERATION (CALLED ONLY IF POSTING)
 # =========================================================
-def generate_image_from_scene(scene_prompt):
-    theme = get_monthly_theme()
-    prompt = f"{scene_prompt}. {STATIC_STYLE} {theme}"
-
+def generate_image_from_scene(prompt):
+    """Generate image from a complete prompt string."""
     if DRY_RUN:
-        print(f"[DRY RUN] Generating image for: {prompt}")
+        print(f"[DRY RUN] Generating image for prompt ({len(prompt)} chars):")
+        print(f"  {prompt[:150]}...")
         # Return a blank dummy image for testing flow
         img = Image.new("RGB", (1024, 1792), color=(50, 50, 50))
         out = BytesIO()
@@ -628,15 +641,24 @@ if __name__ == "__main__":
     holiday = get_today_holiday()
     if holiday:
         text = holiday["text"]
-        scene_prompt = holiday["scene"]
+        # For holidays, use the old-style direct prompt
+        scene_prompt = (
+            f"Cinematic anime-style illustration, ultra high detail, 8K quality, painterly digital art. "
+            f"{holiday['scene']}, with a wide sense of depth and scale. "
+            f"Rich saturated colors, detailed foliage and natural textures. "
+            f"Calm, nostalgic, peaceful mood, slice-of-life atmosphere. "
+            f"Anime background art quality, hand-painted look, soft brush textures, realistic lighting, no text, no watermark."
+        )
         is_holiday = True
         scene_name = "holiday_" + holiday["name"]
         print("HOLIDAY POST:", holiday["name"])
     else:
-        scene_name, text = choose_scene_and_text()
-        scene_prompt = SCENE_PROMPTS[scene_name]
+        scene_data, text = choose_scene_and_text()
+        # Generate randomized prompt from scene data
+        scene_prompt, season = generate_image_prompt(scene_data)
+        scene_name = scene_data["name"]
         is_holiday = False
-        print(f"REGULAR POST: {scene_name}")
+        print(f"REGULAR POST: {scene_name} ({season})")
 
     # 5. GENERATE & POST (COSTS MONEY)
     try:
@@ -667,4 +689,3 @@ if __name__ == "__main__":
         log_engagement(scene_name, text, f"FAILED: {e}")
         log_error(e)
         exit(1)
-
